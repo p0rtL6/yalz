@@ -1,0 +1,11 @@
+[package]
+name = "yalz"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+keywords = ["lempel-ziv", "compression", "algorithm"]
+categories = ["algorithms", "compression"]
+description = "Various Lempel-Ziv compression algorithms."
+repository = "https://github.com/p0rtL6/yalz"
+
+[dependencies]
