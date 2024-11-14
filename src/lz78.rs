@@ -1,11 +1,5 @@
 #[derive(PartialEq, Debug)]
-pub struct Block(usize, Option<Token>);
-
-#[derive(PartialEq, Debug)]
-pub enum Token {
-    Literal(u8),
-    EOF(Option<u8>),
-}
+pub struct Block(usize, Option<u8>);
 
 pub fn compress(input_bytes: impl AsRef<[u8]>) -> Vec<Block> {
     let input_stream = input_bytes.as_ref();
@@ -24,7 +18,7 @@ pub fn compress(input_bytes: impl AsRef<[u8]>) -> Vec<Block> {
                 return false;
             }
 
-            if let Some(Token::Literal(literal)) = block.1 {
+            if let Some(literal) = block.1 {
                 return literal == current_char;
             } else {
                 return false;
@@ -34,12 +28,7 @@ pub fn compress(input_bytes: impl AsRef<[u8]>) -> Vec<Block> {
                 last_matching_index = index;
             }
             None => {
-                let output_token = if coding_positon == (input_stream.len() - 1) {
-                    Token::EOF(Some(current_char))
-                } else {
-                    Token::Literal(current_char)
-                };
-                dictionary.push(Block(last_matching_index, Some(output_token)));
+                dictionary.push(Block(last_matching_index, Some(current_char)));
                 last_matching_index = 0;
             }
         }
@@ -48,7 +37,7 @@ pub fn compress(input_bytes: impl AsRef<[u8]>) -> Vec<Block> {
     }
 
     if last_matching_index != 0 {
-        dictionary.push(Block(last_matching_index, Some(Token::EOF(None))));
+        dictionary.push(Block(last_matching_index, None));
     }
 
     return dictionary;
@@ -68,18 +57,8 @@ pub fn decompress(blocks: &[Block]) -> Vec<u8> {
 
         match &current_block.1 {
             Some(current_token) => {
-                match current_token {
-                    Token::Literal(literal) => {
-                        decompressed_chunk.push(*literal);
-                        stack.push(&blocks[current_block.0]);
-                    }
-                    Token::EOF(literal) => {
-                        if let Some(literal) = literal {
-                            decompressed_chunk.push(*literal);
-                        }
-                        stack.push(&blocks[current_block.0]);
-                    }
-                }
+                decompressed_chunk.push(*current_token);
+                stack.push(&blocks[current_block.0]);
             },
             None => {
                 decompressed_chunk.reverse();
@@ -97,7 +76,7 @@ pub fn decompress(blocks: &[Block]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Block, Token};
+    use super::Block;
 
     #[test]
     fn compress() {
@@ -105,13 +84,13 @@ mod tests {
 
         let expected_output = vec![
             Block(0, None),
-            Block(0, Some(Token::Literal(97))),
-            Block(0, Some(Token::Literal(98))),
-            Block(1, Some(Token::Literal(98))),
-            Block(0, Some(Token::Literal(99))),
-            Block(2, Some(Token::Literal(97))),
-            Block(5, Some(Token::Literal(98))),
-            Block(1, Some(Token::EOF(Some(97)))),
+            Block(0, Some(97)),
+            Block(0, Some(98)),
+            Block(1, Some(98)),
+            Block(0, Some(99)),
+            Block(2, Some(97)),
+            Block(5, Some(98)),
+            Block(1, Some(97)),
         ];
 
         assert_eq!(expected_output, compressed_blocks);
@@ -121,13 +100,13 @@ mod tests {
     fn decompress() {
         let decompressed_bytes = super::decompress(&[
             Block(0, None),
-            Block(0, Some(Token::Literal(97))),
-            Block(0, Some(Token::Literal(98))),
-            Block(1, Some(Token::Literal(98))),
-            Block(0, Some(Token::Literal(99))),
-            Block(2, Some(Token::Literal(97))),
-            Block(5, Some(Token::Literal(98))),
-            Block(1, Some(Token::EOF(Some(97)))),
+            Block(0, Some(97)),
+            Block(0, Some(98)),
+            Block(1, Some(98)),
+            Block(0, Some(99)),
+            Block(2, Some(97)),
+            Block(5, Some(98)),
+            Block(1, Some(97)),
         ]);
 
         assert_eq!("ababcbababaa".as_bytes(), decompressed_bytes);
