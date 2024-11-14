@@ -1,18 +1,7 @@
-use std::fmt;
-
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum Block {
     Pair((usize, usize)),
     Literal(u8),
-}
-
-impl fmt::Debug for Block {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Block::Pair(pair) => write!(f, "Pair({:?})", pair),
-            Block::Literal(literal) => write!(f, "Literal({})", literal),
-        }
-    }
 }
 
 pub struct LZ77Compressor {
@@ -65,7 +54,7 @@ pub fn compress(
                 &input_stream[coding_position..coding_position + buffer_size as usize];
 
             if lookahead_buffer == search_buffer {
-                matched_block = Block::Pair((buffer_size + search_offset, buffer_size));
+                matched_block = Block::Pair((buffer_size, buffer_size + search_offset));
                 buffer_size += 1;
 
                 search_offset = 0;
@@ -78,7 +67,7 @@ pub fn compress(
             Block::Literal(_byte) => {
                 coding_position += 1;
             }
-            Block::Pair((offset, length)) => {
+            Block::Pair((length, offset)) => {
                 let run_start_position = coding_position + length - offset;
                 let initial_match = &input_stream[run_start_position..run_start_position + length];
                 let mut run_multiplier = 1;
@@ -93,7 +82,7 @@ pub fn compress(
                     }
                 }
 
-                matched_block = Block::Pair((offset, length * run_multiplier));
+                matched_block = Block::Pair((length * run_multiplier, offset));
 
                 coding_position += (length * run_multiplier) as usize;
             }
@@ -111,7 +100,7 @@ pub fn decompress(blocks: &[Block]) -> Vec<u8> {
             Block::Literal(literal) => {
                 decompressed_data.push(*literal);
             }
-            Block::Pair((offset, length)) => {
+            Block::Pair((length, offset)) => {
                 let end = decompressed_data.len() - *offset as usize;
                 for i in 0..*length {
                     decompressed_data.push(decompressed_data[end + i]);
@@ -137,9 +126,9 @@ mod tests {
             Block::Literal(98),
             Block::Pair((2, 2)),
             Block::Literal(99),
-            Block::Pair((4, 3)),
+            Block::Pair((3, 4)),
             Block::Pair((2, 2)),
-            Block::Pair((2, 1)),
+            Block::Pair((1, 2)),
             Block::Pair((1, 1)),
         ];
 
@@ -153,9 +142,9 @@ mod tests {
             Block::Literal(98),
             Block::Pair((2, 2)),
             Block::Literal(99),
-            Block::Pair((4, 3)),
+            Block::Pair((3, 4)),
             Block::Pair((2, 2)),
-            Block::Pair((2, 1)),
+            Block::Pair((1, 2)),
             Block::Pair((1, 1)),
         ]);
 
